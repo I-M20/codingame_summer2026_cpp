@@ -1,0 +1,1 @@
+# codingame_summer2026_cpp
