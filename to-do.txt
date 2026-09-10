@@ -1,0 +1,6 @@
+1. Need to prioritize points since the iteration 1 
+fixes the issue of bot not being able to detect its own
+inked railway and build from it.
+2. not sure if possible, but bot always builds from town 0.
+need to confirm if that's always the case
+or if it can build from any other town. might need to check astar
