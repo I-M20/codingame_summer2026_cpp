@@ -5,6 +5,7 @@
 #include <climits>
 #include <queue>
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -20,6 +21,10 @@ struct Node {
 struct town { int id, x, y;string desired_connections; };
 
 struct conne { int from; int to; };
+// nf2
+struct Plan{int cost; vector<Point> path;};
+// nf2
+
 
 vector<Point>pathrec(int targX, int targY, int stX, int stY, const vector<vector<Point>>& parent) {
     vector<Point>path;
@@ -33,19 +38,19 @@ vector<Point>pathrec(int targX, int targY, int stX, int stY, const vector<vector
     return path;
 };
 
-
-bool stillvalid(const vector<Point>& path, const vector<vector<int>>& grid) {
-    for(size_t i = 1;i+1<path.size();i++){//skip start and target towns
-        const Point& p = path[i];
-        if(grid[p.y][p.x]==-1)return false;
-    }
-    return true;
+//nf2
+// bool stillvalid(const vector<Point>& path, const vector<vector<int>>& grid) {
+//     for(size_t i = 1;i+1<path.size();i++){//skip start and target towns
+//         const Point& p = path[i];
+//         if(grid[p.y][p.x]==-1)return false;
+//     }
+//     return true;
         
-    // for (const Point& p : path) {
-    //     if (grid[p.y][p.x] == -1)return false; //cells are inked so towns are never-1. thus safe
-    // }
-    // return true;
-}
+//     // for (const Point& p : path) {
+//     //     if (grid[p.y][p.x] == -1)return false; //cells are inked so towns are never-1. thus safe
+//     // }
+//     // return true;
+// }
 
 
 vector<Point> astar(int stX, int stY, int targX, int targY, int width, int height, const vector<vector<int>>& grid, const vector<vector<bool>>& hasTrack) {
@@ -116,25 +121,25 @@ vector<int> connects(const string& s) {
 
 
 
-
-string exec(vector<Point>& path, const vector<vector<int>>& grid, const vector<vector<bool>>& hasTrack, int& currst) {
-    int pp = 3;
-    bool pl = false;
-    string res;
-    while (currst < path.size() - 1 && pp > 0) {
-        Point p = path[currst];
-        if(hasTrack[p.y][p.x]){currst++;continue;} //already placed, free, dont place
-        int c = grid[p.y][p.x] + 1;
-        if(pp<c)break;
-        pp -= c;
-        if (pl)res += ";";
-        res += "PLACE_TRACKS " + to_string(p.x) + " " + to_string(p.y);
-        pl = true;
-        currst++;
-    }
-    if (!pl) { res = "WAIT"; }
-    return res;
-}
+//nf2
+// string exec(vector<Point>& path, const vector<vector<int>>& grid, const vector<vector<bool>>& hasTrack, int& currst) {
+//     int pp = 3;
+//     bool pl = false;
+//     string res;
+//     while (currst < path.size() - 1 && pp > 0) {
+//         Point p = path[currst];
+//         if(hasTrack[p.y][p.x]){currst++;continue;} //already placed, free, dont place
+//         int c = grid[p.y][p.x] + 1;
+//         if(pp<c)break;
+//         pp -= c;
+//         if (pl)res += ";";
+//         res += "PLACE_TRACKS " + to_string(p.x) + " " + to_string(p.y);
+//         pl = true;
+//         currst++;
+//     }
+//     if (!pl) { res = "WAIT"; }
+//     return res;
+// }
 
 town getTown(const vector<town>& towns, int id) {
     for (const auto& t : towns) {
@@ -184,10 +189,12 @@ int main()
 
     }
     //changed act_ind from -1 to 0 due to moving the act_ind++ lines into path.empty() loop
-    int act_ind = 0, currst = 1;
-    vector<Point> path;
+    
+    //nf2
+    // int act_ind = 0, currst = 1;
+    // vector<Point> path;
     set<int>townRegions;
-    set<int>unreach;
+    // set<int>unreach;
     for (const town& t : towns) {
         grid[t.y][t.x] = -1;
         townRegions.insert(region[t.y][t.x]);
@@ -200,40 +207,110 @@ int main()
             co1.push_back({ t.id, t1 });
         }
     }
+
+
     while (1) {
-        int my_score;
-        cin >> my_score; cin.ignore();
-        int foe_score;
-        cin >> foe_score; cin.ignore();
+        int my_score;cin >> my_score; cin.ignore();
+        int foe_score;cin >> foe_score; cin.ignore();
         int enem = 1 - my_id;
-        int bestx = -1, besty = -1, bestinst = -1;
+
+        set<string> active;
+        map<int, int>inst;//region where highest instab found
+        map<int, int>value; // region w weighted enem track val
+        set<int>mine; //region w my tracks
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                int tracks_owner;
-                int instability; // region inked (destroyed) when this >= 3.
+                int tracks_owner, instability; // region inked (destroyed) when this >= 3.
                 bool inked; // true if region is destroyed.
-                string part_of_active_connections; // if this cell is part of one or more railway connections, this will be town ids (separated by -) in a list separated by commas. e.g. 0-1,1-2,1-3. "x" otherwise.
-                cin >> tracks_owner >> instability >> inked >> part_of_active_connections; cin.ignore();
+                //poac = part_of_active_cell
+                string poac; // if this cell is part of one or more railway connections, this will be town ids (separated by -) in a list separated by commas. e.g. 0-1,1-2,1-3. "x" otherwise.
+                cin >> tracks_owner >> instability >> inked >> poac; cin.ignore();
                 if (inked) grid[i][j] = -1;
-                
-                // Track placed rails from part_of_active_connections
-               
+                // Track placed rails from poac
                     // new fix, verifies no owner value
                     hasTrack[i][j] = (tracks_owner>=0)&&!inked;
                
                 
-                if (tracks_owner == enem && !inked && !townRegions.count(region[i][j])) {
-                    if (instability > bestinst)//keep hindering same region
-                    {
-                        bestinst = instability;bestx = j;besty = i;
+                // nf2
+                if(poac!="x"){
+                    size_t st = 0;
+                    while(st<=poac.size()){
+                        size_t cm = poac.find(',',st);
+                        if(cm == string::npos)cm = poac.size();
+                        active.insert(poac.substr(st, cm - st));
+                        st = cm+1;
                     }
+                }
+
+                //nf2
+                
+                if(tracks_owner == my_id)mine.insert(region[i][j]);
+                if(tracks_owner==enem&&!inked&&!townRegions.count(region[i][j])){
+                    value[region[i][j]]+=1 + (poac!="x"?3:0);
+                    inst[region[i][j]] = max(inst[region[i][j]],instability);
                 }
             }
         }
+        int bestReg = -1, bestVal = -1;
+        for(auto&[r,v]:value){
+            if(mine.count(r))continue;
+                int s = v+inst[r]*5;
+                if(s>bestVal){bestVal = s;bestReg = r;}
+                }
+        vector<Plan>plans;
+        for (const conne& cn : co1) {
+            string k1 = to_string(cn.from) + "-" + to_string(cn.to);
+            string k2 = to_string(cn.to) + "-" + to_string(cn.from);
+            if (active.count(k1) || active.count(k2)) continue;
+            town fr = getTown(towns, cn.from), to = getTown(towns, cn.to);
+            vector<Point> p = astar(fr.x, fr.y, to.x, to.y, width, height, grid, hasTrack);
+            if (p.empty()) continue;
+            int cost = 0;
+            for (size_t i = 1; i + 1 < p.size(); i++)
+                if (!hasTrack[p[i].y][p[i].x]) cost += grid[p[i].y][p[i].x] + 1;
+            plans.push_back({cost, p});
+        }   // <-- the co1 loop closes HERE
+
+        sort(plans.begin(), plans.end(),
+             [](const Plan& a, const Plan& b) { return a.cost < b.cost; });
+
+        int pp = 3;
+        string moveact;
+        for (const Plan& pl : plans) {
+            for (size_t i = 1; i + 1 < pl.path.size() && pp > 0; i++) {
+                Point pt = pl.path[i];
+                if (hasTrack[pt.y][pt.x]) continue;
+                int cellCost = grid[pt.y][pt.x] + 1;
+                if (pp < cellCost) break;
+                pp -= cellCost;
+                if (!moveact.empty()) moveact += ";";
+                moveact += "PLACE_TRACKS " + to_string(pt.x) + " " + to_string(pt.y);
+                hasTrack[pt.y][pt.x] = true;
+            }
+            if (pp <= 0) break;
+        }
+
+        string out = moveact;
+        if (bestReg != -1) {
+            if (out.empty()) out = "DISRUPT " + to_string(bestReg);
+            else out += ";DISRUPT " + to_string(bestReg);
+        }
+        if (out.empty()) out = "WAIT";
+        cout << out << endl;
+    }   
+                
+                
+                // if (tracks_owner == enem && !inked && !townRegions.count(region[i][j])) {
+                //     if (instability > bestinst)//keep hindering same region
+                //     {
+                //         bestinst = instability;bestx = j;besty = i;
+                //     }
+                // }
+            
 
        
-        if(!path.empty()&&!stillvalid(path,grid)){path.clear();currst=1;}
-        else if(!path.empty()&& currst>=(int)path.size()-1){act_ind++;path.clear();currst=1;}
+        // if(!path.empty()&&!stillvalid(path,grid)){path.clear();currst=1;}
+        // else if(!path.empty()&& currst>=(int)path.size()-1){act_ind++;path.clear();currst=1;}
 
         // if (!path.empty() && currst >= path.size() - 1) {
         //     act_ind++;path.clear();currst = 1;
@@ -254,33 +331,37 @@ int main()
         //     }
         // }
         
+        //nf2
+        // string moveact;
+        // int tries = 0;
+        // while(tries++<(int)co1.size()+1){
+        //     if(path.empty()&&act_ind < (int)co1.size()){
+        //          conne c = co1[act_ind];
+        //     town fr = getTown(towns, c.from);
+        //     town to = getTown(towns, c.to);
+        //     path = astar(fr.x, fr.y, to.x, to.y, width, height, grid, hasTrack);
+        //     currst = 1;
+        //     if(path.empty()){
+        //         unreach.insert(act_ind);
+        //         act_ind++;
+        //         continue;
+        //     }
+        //     }
+        //     if(path.empty())break;
 
-        string moveact;
-        int tries = 0;
-        while(tries++<(int)co1.size()+1){
-            if(path.empty()&&act_ind < (int)co1.size()){
-                 conne c = co1[act_ind];
-            town fr = getTown(towns, c.from);
-            town to = getTown(towns, c.to);
-            path = astar(fr.x, fr.y, to.x, to.y, width, height, grid, hasTrack);
-            currst = 1;
-            if(path.empty()){
-                unreach.insert(act_ind);
-                act_ind++;
-                continue;
-            }
-            }
-            if(path.empty())break;
+        //     moveact = exec(path,grid,hasTrack,currst);
+        //     if(moveact!="WAIT")break;
+        //     if(currst>=(int)path.size()-1){
+        //         act_ind++;path.clear();currst=1;
+        //     }else break;
+        // }
+        // if(moveact.empty())moveact = "WAIT";
+        // if (bestx != -1) { cout << moveact << ";DISRUPT " << bestx << " " << besty << endl; }
+        // else { cout << moveact << endl; }
 
-            moveact = exec(path,grid,hasTrack,currst);
-            if(moveact!="WAIT")break;
-            if(currst>=(int)path.size()-1){
-                act_ind++;path.clear();currst=1;
-            }else break;
-        }
-        if(moveact.empty())moveact = "WAIT";
-        if (bestx != -1) { cout << moveact << ";DISRUPT " << bestx << " " << besty << endl; }
-        else { cout << moveact << endl; }
+
+        //nf2 
+    
         
         // if (!path.empty() && currst < (int)path.size() - 1) {
         //     moveact = exec(path, grid, hasTrack, currst);
@@ -309,7 +390,7 @@ int main()
     ->curr goes till end of path via exec which leads execs curr<path.size()-1 to do nothing and print WAIT
     fix: in exec, use currst and remove curr.
     
-    2.i) ignored part_of_active_connections to identify placed tracks.
+    2.i) ignored poac to identify placed tracks.
     ii) inking only targetted enemy tracks in non-town regions,
      also picking highest instability cells w/o considerign strategic value
      no tracking of regions close to being inked i.e. instability>=2
@@ -327,4 +408,4 @@ int main()
     // Write an action using cout. DON'T FORGET THE "<< endl"
     // To debug: cerr << "Debug messages..." << endl;
     // AUTOPLACE x1 y1 x2 | PLACE_TRACKS x y | DISRUPT regionId | MESSAGE text
-}
+
